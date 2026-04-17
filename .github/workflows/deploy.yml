@@ -41,7 +41,9 @@ jobs:
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/wsa_mes_key.pem
+          cat > ~/.ssh/wsa_mes_key.pem <<'EOF'
+          ${{ secrets.SSH_PRIVATE_KEY }}
+          EOF
           chmod 600 ~/.ssh/wsa_mes_key.pem
           ssh-keyscan -p 30022 mswpms.co.kr >> ~/.ssh/known_hosts
 
