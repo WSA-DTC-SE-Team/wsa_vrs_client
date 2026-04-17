@@ -1,0 +1,322 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html,
+    body,
+    div,
+    span,
+    applet,
+    object,
+    iframe,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    blockquote,
+    pre,
+    a,
+    abbr,
+    acronym,
+    address,
+    big,
+    cite,
+    code,
+    del,
+    dfn,
+    em,
+    img,
+    ins,
+    kbd,
+    q,
+    s,
+    samp,
+    small,
+    strike,
+    strong,
+    sub,
+    sup,
+    tt,
+    var,
+    b,
+    u,
+    i,
+    center,
+    dl,
+    dt,
+    dd,
+    ol,
+    ul,
+    li,
+    fieldset,
+    form,
+    label,
+    legend,
+    table,
+    caption,
+    tbody,
+    tfoot,
+    thead,
+    tr,
+    th,
+    td,
+    article,
+    aside,
+    canvas,
+    details,
+    embed,
+    figure,
+    figcaption,
+    footer,
+    header,
+    hgroup,
+    menu,
+    nav,
+    output,
+    ruby,
+    section,
+    summary,
+    time,
+    mark,
+    audio,
+    video,
+    * {
+        margin: 0;
+        padding: 0;
+        border: 0;
+
+        vertical-align: baseline;
+        box-sizing: border-box;
+    }
+
+    ul,
+    li {
+        list-style: none;
+    }
+
+    html {
+        font-size: 12px; /* 모바일: 1rem = 12px */
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body {
+        font-family: var(--font-noto-sans-kr), var(--font-noto-sans),
+            -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        font-size: 1rem;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    :root {
+        --default-spacing-xs: 4px;
+        --default-spacing-s: 8px;
+        --default-spacing-sm: 12px;
+        --default-spacing-m: 16px;
+        --default-spacing-ml: 20px;
+        --default-spacing-l: 24px;
+        --mobile-button: 40px;
+        --header-height: 48px;
+        --desktop-nav-width: 200px;
+        --light-gray: #f6f6f6;
+        --medium-gray: #e6e6e6;
+        --warning-bg: #fff0f1;
+        --warning-stroke: #ff6e74;
+        --white: #fff;
+        --black: #000;
+        --green: #1abc9c;
+        --blue: #3498db;
+        --header-blue: #0064fe;
+        --purple: #9b59b6;
+    }
+
+    .title-padding {
+        padding: 12px 12px;
+    }
+
+    .default-linear {
+        background: linear-gradient(135deg, #4da3ff 0%, #0064fe 100%);
+        box-shadow: 0 2px 6px rgba(77, 163, 255, 0.3);
+        color: #fff;
+    }
+
+    .completed {
+        color: #065f46;
+        background-color: #ecfdf5;
+    }
+
+    .waiting {
+        color: #92400e;
+        background-color: #fffbeb;
+    }
+
+    .inprogess {
+        color: #3730a3;
+        background-color: #eef2ff;
+    }
+
+    .cancel {
+        color: #9f1239;
+        background-color: #fdf2f8;
+    }
+
+    /* iOS Safari input 크로스 브라우징 수정 */
+    input:not([type="checkbox"]):not([type="radio"]),
+    textarea,
+    select,
+    button {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border-radius: 0;
+        font-family: inherit;
+        font-size: inherit;
+        line-height: inherit;
+    }
+
+    /* checkbox와 radio는 기본 스타일 유지 */
+    input[type="checkbox"],
+    input[type="radio"] {
+        -webkit-appearance: auto;
+        -moz-appearance: auto;
+        appearance: auto;
+        width: 1rem;
+        height: 1rem;
+        border: 1px solid #d1d5db;
+        margin: 0;
+        cursor: pointer;
+    }
+
+    input[type="checkbox"]:checked,
+    input[type="radio"]:checked {
+        accent-color: #3b82f6;
+    }
+
+    textarea {
+        font-family: inherit;
+        resize: none;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="search"],
+    textarea,
+    select {
+        /* iOS에서 input 확대 방지 */
+        font-size: max(16px, 1em);
+        /* iOS 기본 스타일 제거 */
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        /* iOS 그림자 제거 */
+        -webkit-box-shadow: none;
+        box-shadow: none;
+        /* iOS 내부 그림자 제거 */
+        -webkit-inner-shadow: none;
+        /* iOS 탭 하이라이트 제거 */
+        -webkit-tap-highlight-color: transparent;
+        /* 기본 border-radius 제거 */
+        border-radius: 4px;
+    }
+
+    input:focus {
+        outline: none;
+        border-color: #4da3ff;
+        background-color: white;
+        box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.1);
+        transition: all 0.3s ease;
+        -moz-appearance: textfield;
+    }
+
+    input:-webkit-inner-spin-button,
+    input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    input:disabled {
+        background-color: #f3f4f6;
+        color: #9ca3af;
+        cursor: not-allowed;
+        opacity: 1; /* iOS에서 disabled 투명도 방지 */
+        -webkit-text-fill-color: #9ca3af; /* iOS에서 disabled 텍스트 색상 */
+    }
+
+    input::placeholder {
+        color: #d1d5db;
+        opacity: 1; /* Firefox placeholder 투명도 정규화 */
+    }
+
+    /* iOS Safari에서 날짜/시간 input 스타일 */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator,
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        height: auto;
+        color: transparent;
+        background: transparent;
+    }
+
+    /* date, datetime-local input은 항상 클릭 가능하도록 */
+    input[type="date"],
+    input[type="datetime-local"] {
+        position: relative;
+        cursor: pointer;
+    }
+
+    /* iOS에서 select 화살표 커스터마이징 */
+    select::-ms-expand {
+        display: none;
+    }
+
+    /* 모든 select에 커스텀 화살표 추가 */
+    select {
+        padding-right: 2rem;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.5rem center;
+    }
+
+    /* iOS에서 textarea 리사이즈 핸들 제거 (필요시) */
+    textarea {
+        resize: vertical;
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+
+    /* 1024px 이상일 때 데스크톱 전용 요소 보이기 */
+    @media (min-width: 1024px) {
+        html {
+            font-size: 14px; /* 데스크탑: 1rem = 14px */
+        }
+
+        body {
+            font-size: 1rem;
+        }
+
+        .desktop-only {
+            display: block !important;
+        }
+
+        .mobile-only {
+            display: none !important;
+        }
+    }
+}
