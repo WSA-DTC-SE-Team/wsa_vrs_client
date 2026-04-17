@@ -37,13 +37,14 @@ jobs:
             - name: Prepare deployment files
               run: node scripts/prepare-deploy.js
 
-            # 6. SSH 키 설정 (액션 이름과 옵션을 반드시 세트로 맞춰야 합니다!)
+            # 6. SSH 키 설정
             - name: Install SSH Key
               uses: shimataro/ssh-key-action@v2
               with:
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   passphrase: ${{ secrets.SSH_PASSPHRASE }}
-                  known_hosts: "no-hosts-yet" # 7번 단계에서 보완하므로 placeholder 유지
+                  known_hosts: "no-hosts-yet"
+                  if_key_exists: replace # 기존에 잘못 등록된 키가 있다면 교체
 
             # 7. known_hosts 설정
             - name: Add server to known_hosts
@@ -56,12 +57,12 @@ jobs:
             # 8. 서버로 ZIP 파일 전송
             - name: Upload to server
               run: |
-                  scp -P 30022 wsa_vrs_client.zip root@mswpms.co.kr:~/com_wsa_client/com_wsa_vrs/deploy/
+                  scp -v -P 30022 -o StrictHostKeyChecking=no wsa_vrs_client.zip root@mswpms.co.kr:~/com_wsa_client/com_wsa_vrs/deploy/
 
             # 9. 서버에서 배포 스크립트 실행
             - name: Deploy on server
               run: |
-                  ssh -p 30022 root@mswpms.co.kr << 'EOF'
+                  ssh -v -p 30022 -o StrictHostKeyChecking=no root@mswpms.co.kr << 'EOF'
                     cd ~/com_wsa_client/com_wsa_vrs/deploy
 
                     # 기존 파일 백업
