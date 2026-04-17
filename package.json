@@ -5,6 +5,9 @@
   "scripts": {
     "dev": "cross-env NEXT_PUBLIC_API_URL=local next dev -p 3028",
     "build": "next build",
+    "build:prod": "cross-env NEXT_PUBLIC_API_URL=production next build",
+    "prepare-deploy": "node scripts/prepare-deploy.js",
+    "deploy": "npm run build:prod && npm run prepare-deploy",
     "start": "next start",
     "start:prod": "next start -p 4005",
     "lint": "next lint"
@@ -31,9 +34,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "archiver": "^7.0.1",
     "babel-plugin-react-compiler": "1.0.0",
     "cross-env": "^10.1.0",
     "eslint": "^9",
+    "fs-extra": "^11.3.4",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

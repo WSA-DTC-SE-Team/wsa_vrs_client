@@ -20,6 +20,7 @@
 # production
 /build
 /deploy
+wsa_vrs_client.zip
 
 # misc
 .DS_Store
