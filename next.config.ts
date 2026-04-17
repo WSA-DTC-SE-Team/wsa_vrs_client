@@ -15,16 +15,13 @@ const nextConfig: NextConfig = {
         : {}),
 
     async rewrites() {
-        // 수정된 로직: 값이 "local"이면 내부 IP를, 아니면 환경 변수 값 그대로(또는 기본값) 사용
-        let apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        // 환경에 따른 API URL 설정
+        const apiUrl =
+            process.env.NEXT_PUBLIC_API_URL === "local"
+                ? "http://192.168.20.249:35000"
+                : "https://mswpms.co.kr:35000";
 
-        if (apiUrl === "local") {
-            apiUrl = "http://192.168.20.249:35000";
-        } else if (!apiUrl) {
-            apiUrl = "https://mswpms.co.kr:35000";
-        }
-
-        console.log("🚀 [Rewrites] Target API URL:", apiUrl);
+        console.log("🔧 [next.config] API URL:", apiUrl);
 
         return [
             {
