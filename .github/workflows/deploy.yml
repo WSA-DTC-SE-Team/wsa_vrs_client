@@ -41,14 +41,17 @@ jobs:
             - name: Setup SSH Agent
               uses: webfactory/ssh-agent@v0.9.0
               with:
-                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  ssh-passphrase: ${{ secrets.SSH_PASSPHRASE }} # 이 부분을 추가하세요!
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  passphrase: ${{ secrets.SSH_PASSPHRASE }} # Secrets에 등록한 암호 사용
+                  known_hosts: "just-placeholder" # 아래 7번 단계에서 처리하므로 임시값 입력
 
             # 7. known_hosts 설정
             - name: Add server to known_hosts
               run: |
                   mkdir -p ~/.ssh
+                  chmod 700 ~/.ssh
                   ssh-keyscan -p 30022 mswpms.co.kr >> ~/.ssh/known_hosts
+                  chmod 644 ~/.ssh/known_hosts
 
             # 8. 서버로 ZIP 파일 전송
             - name: Upload to server
