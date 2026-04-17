@@ -42,7 +42,8 @@
       "Bash(powershell \"Stop-Process -Name node -Force -ErrorAction SilentlyContinue\")",
       "Bash(git branch:*)",
       "Bash(git add:*)",
-      "Bash(cmd.exe /c \"del /F nul 2>nul\")"
+      "Bash(cmd.exe /c \"del /F nul 2>nul\")",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
