@@ -37,13 +37,13 @@ jobs:
             - name: Prepare deployment files
               run: node scripts/prepare-deploy.js
 
-            # 6. SSH 키 설정 (webfactory/ssh-agent 사용)
-            - name: Setup SSH Agent
-              uses: webfactory/ssh-agent@v0.9.0
+            # 6. SSH 키 설정 (액션 이름과 옵션을 반드시 세트로 맞춰야 합니다!)
+            - name: Install SSH Key
+              uses: shimataro/ssh-key-action@v2
               with:
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  passphrase: ${{ secrets.SSH_PASSPHRASE }} # Secrets에 등록한 암호 사용
-                  known_hosts: "just-placeholder" # 아래 7번 단계에서 처리하므로 임시값 입력
+                  passphrase: ${{ secrets.SSH_PASSPHRASE }}
+                  known_hosts: "no-hosts-yet" # 7번 단계에서 보완하므로 placeholder 유지
 
             # 7. known_hosts 설정
             - name: Add server to known_hosts
