@@ -37,37 +37,27 @@ jobs:
       - name: Prepare deployment files
         run: node scripts/prepare-deploy.js
 
-      # 6. SSH 키 설정
-      - name: Setup SSH key
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+      # 6. SSH 키 설정 (webfactory/ssh-agent 사용)
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # 7. known_hosts 설정
+      - name: Add server to known_hosts
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p 30022 mswpms.co.kr >> ~/.ssh/known_hosts
 
-          # SSH 키 파일 생성
-          cat > ~/.ssh/wsa_mes_key.pem <<'EOF'
-          ${{ secrets.SSH_PRIVATE_KEY }}
-          EOF
-          chmod 600 ~/.ssh/wsa_mes_key.pem
-
-          # ssh-agent 시작 및 키 추가 (passphrase 포함)
-          eval $(ssh-agent -a $SSH_AUTH_SOCK)
-          echo "${{ secrets.SSH_PASSPHRASE }}" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/wsa_mes_key.pem
-
-      # 7. 서버로 ZIP 파일 전송
+      # 8. 서버로 ZIP 파일 전송
       - name: Upload to server
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          scp -P 30022 -o IdentitiesOnly=yes wsa_vrs_client.zip root@mswpms.co.kr:~/com_wsa_client/com_wsa_vrs/deploy/
+          scp -P 30022 wsa_vrs_client.zip root@mswpms.co.kr:~/com_wsa_client/com_wsa_vrs/deploy/
 
-      # 8. 서버에서 배포 스크립트 실행
+      # 9. 서버에서 배포 스크립트 실행
       - name: Deploy on server
-        env:
-          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
         run: |
-          ssh -p 30022 -o IdentitiesOnly=yes root@mswpms.co.kr << 'EOF'
+          ssh -p 30022 root@mswpms.co.kr << 'EOF'
             cd ~/com_wsa_client/com_wsa_vrs/deploy
 
             # 기존 파일 백업
