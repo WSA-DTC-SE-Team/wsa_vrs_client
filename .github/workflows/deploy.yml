@@ -88,12 +88,12 @@ jobs:
                     echo "✅ 배포 완료!"
                   EOF
 
-            # 9. 배포 결과 알림 (선택사항)
+            # 10. 배포 결과 알림
             - name: Notify deployment status
               if: always()
               run: |
                   if [ ${{ job.status }} == 'success' ]; then
-                    echo "✅ 배포 성공!"
+                    echo "✅ 배포 성공! 🎉"
                   else
-                    echo "❌ 배포 실패!"
+                    echo "❌ 배포 실패! 로그를 확인하세요."
                   fi
