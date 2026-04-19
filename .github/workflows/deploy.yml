@@ -10,8 +10,6 @@ on:
 jobs:
     deploy:
         runs-on: ubuntu-latest
-        env:
-            SSH_AUTH_SOCK: /tmp/ssh-agent.sock
         steps:
             # 1. 코드 체크아웃
             - name: Checkout code
@@ -46,6 +44,17 @@ jobs:
                   passphrase: ${{ secrets.SSH_PASSPHRASE }}
                   known_hosts: "no-hosts-yet"
                   if_key_exists: replace # 기존에 잘못 등록된 키가 있다면 교체
+
+            # 6-1. SSH 에이전트 상태 확인 (디버그)
+            - name: Debug SSH Agent
+              run: |
+                  echo "📌 SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
+                  echo "📌 SSH 키 목록:"
+                  ssh-add -l || echo "⚠️  ssh-add failed with code $?"
+                  echo "📌 ssh-agent 프로세스:"
+                  ps aux | grep ssh-agent || echo "No ssh-agent process found"
+                  echo "📌 ~/.ssh 디렉토리:"
+                  ls -la ~/.ssh/
 
             # 7. known_hosts 설정
             - name: Add server to known_hosts
