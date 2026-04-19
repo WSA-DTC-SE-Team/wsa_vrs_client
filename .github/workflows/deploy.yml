@@ -36,66 +36,50 @@ jobs:
             - name: Prepare deployment files
               run: node scripts/prepare-deploy.js
 
-            # 6. SSH 키 설정
-            - name: Install SSH Key
-              uses: shimataro/ssh-key-action@v2
+            # 6. 서버로 ZIP 파일 전송 (appleboy/scp-action 사용)
+            - name: Upload to server
+              uses: appleboy/scp-action@v0.1.7
               with:
+                  host: mswpms.co.kr
+                  username: root
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   passphrase: ${{ secrets.SSH_PASSPHRASE }}
-                  known_hosts: "no-hosts-yet"
-                  if_key_exists: replace # 기존에 잘못 등록된 키가 있다면 교체
+                  port: 30022
+                  source: "wsa_vrs_client.zip"
+                  target: "~/com_wsa_client/com_wsa_vrs/deploy/"
 
-            # 6-1. SSH 에이전트 상태 확인 (디버그)
-            - name: Debug SSH Agent
-              run: |
-                  echo "📌 SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
-                  echo "📌 SSH 키 목록:"
-                  ssh-add -l || echo "⚠️  ssh-add failed with code $?"
-                  echo "📌 ssh-agent 프로세스:"
-                  ps aux | grep ssh-agent || echo "No ssh-agent process found"
-                  echo "📌 ~/.ssh 디렉토리:"
-                  ls -la ~/.ssh/
-
-            # 7. known_hosts 설정
-            - name: Add server to known_hosts
-              run: |
-                  mkdir -p ~/.ssh
-                  chmod 700 ~/.ssh
-                  ssh-keyscan -p 30022 mswpms.co.kr >> ~/.ssh/known_hosts
-                  chmod 644 ~/.ssh/known_hosts
-
-            # 8. 서버로 ZIP 파일 전송
-            - name: Upload to server
-              run: |
-                  scp -v -P 30022 -o StrictHostKeyChecking=no wsa_vrs_client.zip root@mswpms.co.kr:~/com_wsa_client/com_wsa_vrs/deploy/
-
-            # 9. 서버에서 배포 스크립트 실행
+            # 7. 서버에서 배포 스크립트 실행 (appleboy/ssh-action 사용)
             - name: Deploy on server
-              run: |
-                  ssh -v -p 30022 -o StrictHostKeyChecking=no root@mswpms.co.kr << 'EOF'
-                  cd ~/com_wsa_client/com_wsa_vrs/deploy
+              uses: appleboy/ssh-action@v1.2.0
+              with:
+                  host: mswpms.co.kr
+                  username: root
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  passphrase: ${{ secrets.SSH_PASSPHRASE }}
+                  port: 30022
+                  script: |
+                      cd ~/com_wsa_client/com_wsa_vrs/deploy
 
-                    # 기존 파일 백업
-                    if [ -d "wsa_vrs_client" ]; then
-                      mv wsa_vrs_client wsa_vrs_client_backup_$(date +%Y%m%d_%H%M%S)
-                    fi
+                      # 기존 파일 백업
+                      if [ -d "wsa_vrs_client" ]; then
+                        mv wsa_vrs_client wsa_vrs_client_backup_$(date +%Y%m%d_%H%M%S)
+                      fi
 
-                    # 압축 해제
-                    unzip -o wsa_vrs_client.zip
+                      # 압축 해제
+                      unzip -o wsa_vrs_client.zip
 
-                    # Docker 컨테이너 재시작
-                    cd ~/com_wsa_client/com_wsa_vrs
-                    docker-compose restart wsa_vrs_client
+                      # Docker 컨테이너 재시작
+                      cd ~/com_wsa_client/com_wsa_vrs
+                      docker-compose restart wsa_vrs_client
 
-                    # 정리
-                    cd deploy
-                    rm wsa_vrs_client.zip
+                      # 정리
+                      cd deploy
+                      rm wsa_vrs_client.zip
 
-                    # 오래된 백업 삭제 (최근 3개만 유지)
-                    ls -t | grep wsa_vrs_client_backup | tail -n +4 | xargs -r rm -rf
+                      # 오래된 백업 삭제 (최근 3개만 유지)
+                      ls -t | grep wsa_vrs_client_backup | tail -n +4 | xargs -r rm -rf
 
-                    echo "✅ 배포 완료!"
-                  EOF
+                      echo "✅ 배포 완료!"
 
             # 10. 배포 결과 알림
             - name: Notify deployment status
