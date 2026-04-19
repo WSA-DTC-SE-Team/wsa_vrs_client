@@ -36,6 +36,18 @@ jobs:
             - name: Prepare deployment files
               run: node scripts/prepare-deploy.js
 
+            # 5-1. ZIP 파일 내용 확인 (디버그)
+            - name: Verify ZIP contents
+              run: |
+                  echo "📦 ZIP 파일 크기:"
+                  ls -lh wsa_vrs_client.zip
+                  echo ""
+                  echo "📦 ZIP 파일 내용물:"
+                  unzip -l wsa_vrs_client.zip | head -50
+                  echo ""
+                  echo "📦 주요 파일 확인:"
+                  unzip -l wsa_vrs_client.zip | grep -E "(server.js|package.json|public|.next/static)" || echo "⚠️  주요 파일 누락!"
+
             # 6. 서버로 ZIP 파일 전송 (appleboy/scp-action 사용)
             - name: Upload to server
               uses: appleboy/scp-action@v0.1.7
