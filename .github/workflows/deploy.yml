@@ -80,18 +80,38 @@ jobs:
                       # 압축 해제
                       unzip -o wsa_vrs_client.zip
 
-                      # Docker 컨테이너 재시작
-                      cd ~/com_wsa_client/com_wsa_vrs
-                      docker-compose restart wsa_vrs_client
+                      # Docker 컨테이너 중지 및 제거
+                      echo "🛑 기존 컨테이너 중지 중..."
+                      docker stop wsa-vrs-client 2>/dev/null || true
+                      docker rm wsa-vrs-client 2>/dev/null || true
+
+                      # 새 컨테이너 시작 (환경 변수 포함)
+                      echo "🚀 새 컨테이너 시작 중..."
+                      docker run -d \
+                        --name wsa-vrs-client \
+                        --network host \
+                        -v ~/com_wsa_client/com_wsa_vrs/deploy:/app \
+                        -w /app \
+                        -e PORT=4005 \
+                        -e NEXT_PUBLIC_API_URL=production \
+                        --health-cmd="curl -f http://localhost:4005 || exit 1" \
+                        --health-interval=30s \
+                        --health-timeout=10s \
+                        --health-retries=3 \
+                        --health-start-period=60s \
+                        node:20 \
+                        node wsa_vrs_client/server.js
 
                       # 정리
-                      cd deploy
+                      cd ~/com_wsa_client/com_wsa_vrs/deploy
                       rm wsa_vrs_client.zip
 
                       # 오래된 백업 삭제 (최근 3개만 유지)
                       ls -t | grep wsa_vrs_client_backup | tail -n +4 | xargs -r rm -rf
 
                       echo "✅ 배포 완료!"
+                      echo "📊 컨테이너 상태:"
+                      docker ps | grep wsa-vrs-client
 
             # 10. 배포 결과 알림
             - name: Notify deployment status
