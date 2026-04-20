@@ -53,8 +53,8 @@ async function pagingTableGetData<T>(
     const realUrl = queryString ? `${url}${separator}${queryString}` : url;
 
     // 서버 컴포넌트는 절대 URL 필요 - 직접 API 서버로 호출
-    // 환경 변수가 있으면 로컬(249:35000), 없으면 배포(localhost:8081)
-    const isLocal = !!process.env.NEXT_PUBLIC_API_URL;
+    // 환경 변수가 "local"이면 로컬(249:35000), 아니면 배포(localhost:8081)
+    const isLocal = process.env.NEXT_PUBLIC_API_URL === "local";
     const baseUrl = isLocal
         ? "http://192.168.20.249:35000"
         : "http://localhost:8081";
