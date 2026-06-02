@@ -315,6 +315,7 @@ const Client = ({
                 vehicleId: vehicleId as string,
                 page: nextPage.toString(),
                 size: "10",
+                //    sort: "currentDistance.desc"
             };
 
             // URL에서 검색, 정렬, 필터 파라미터 가져오기
@@ -324,7 +325,11 @@ const Client = ({
             const affiliationName = searchParams.get("affiliationName");
             const destination = searchParams.get("destination");
 
-            if (sort) params.sort = sort;
+            if (sort) {
+                params.sort = sort;
+            } else if (activeTab === "drivingLogs") {
+                params.sort = "currentDistance.desc";
+            }
             if (useDateRange) params["useDate<>"] = useDateRange;
             if (employeeName) params.employeeName = employeeName;
             if (affiliationName) params.affiliationName = affiliationName;

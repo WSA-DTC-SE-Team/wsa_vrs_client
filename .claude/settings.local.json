@@ -43,7 +43,12 @@
       "Bash(git branch:*)",
       "Bash(git add:*)",
       "Bash(cmd.exe /c \"del /F nul 2>nul\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Read(//c/Users/231222/**)",
+      "Bash(gh run:*)",
+      "Bash(git restore:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []

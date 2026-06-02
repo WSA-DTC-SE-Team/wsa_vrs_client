@@ -135,7 +135,7 @@ axiosInstance.interceptors.response.use(
             code === 1025;
 
         if (shouldLogout) {
-            //     window.location.href = "https://portal.mswpms.co.kr:444/";
+            window.location.href = "https://portal.mswpms.co.kr:444/";
             return Promise.reject(error);
         }
 
