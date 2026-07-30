@@ -68,6 +68,7 @@ async function pagingTableGetData<T>(
     const allCookies = cookieStore.getAll();
 
     // Authorization 쿠키만 사용 (액세스 토큰)
+    
     const authCookie = allCookies.find((c) => c.name === "Authorization");
     const cookieHeader = authCookie
         ? `${authCookie.name}=${authCookie.value}`

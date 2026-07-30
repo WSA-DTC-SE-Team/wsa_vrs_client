@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// lib/axios.ts의 PORTAL_URL과 동일한 규칙 (재로그인이 필요할 때 이동할 곳)
+const PORTAL_URL =
+    process.env.PORTAL_REDIRECT || "https://portal.mswpms.co.kr:444/";
+
 /**
  * JWT 디코딩 (검증 없이 payload만 추출)
  */
@@ -23,14 +27,26 @@ function decodeJWT(token: string): { exp?: number } | null {
  * JWT 만료 여부 체크 (여유 시간 포함)
  * 만료 20초 전에 미리 refresh
  */
-function isTokenExpired(token: string): boolean {
+function isTokenExpired(token: string, bufferSeconds = 20): boolean {
     const decoded = decodeJWT(token);
     if (!decoded?.exp) return true;
 
     const now = Math.floor(Date.now() / 1000);
-    const bufferSeconds = 20; // 20초 여유
-
     return now + bufferSeconds >= decoded.exp;
+}
+
+// accessToken, refreshToken 쿠키 삭제
+function clearAuthCookies(response: NextResponse) {
+    response.cookies.delete("Authorization");
+    response.cookies.delete("Refresh");
+    return response;
+}
+
+// refresh로 복구 불가능한 상태 -> 쿠키 정리 후 포털로 리다이렉트
+function redirectToPortal(request: NextRequest) {
+    const url = new URL(PORTAL_URL);
+    url.searchParams.set("redirectUrl", request.nextUrl.href);
+    return clearAuthCookies(NextResponse.redirect(url));
 }
 
 export async function middleware(request: NextRequest) {
@@ -54,84 +70,77 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 토큰이 실제로 만료되었을 때만 refresh
+    // accessToken이 아직 유효하면 통과
+    if (!isTokenExpired(accessToken)) {
+        return NextResponse.next();
+    }
+
+    // refreshToken까지 만료됐다면 refresh를 시도해도 어차피 실패 -> 바로 재로그인
+    if (isTokenExpired(refreshToken, 0)) {
+        console.log("🔄 [Middleware] refreshToken 만료 - 포털로 리다이렉트");
+        return redirectToPortal(request);
+    }
+
+    // accessToken만 만료된 경우 refresh 시도
     // (GetData는 Server Component라서 쿠키 설정 불가 → Middleware에서 처리 필요)
-    if (isTokenExpired(accessToken)) {
-        console.log("🔄 [Middleware] 토큰 만료 - refresh 시작");
-        try {
-            //  환경 변수가 있으면 로컬(249), 없으면 프로덕션(mswpms)
-            const serverBaseURL = process.env.NEXT_PUBLIC_API_URL
+    try {
+        // 로컬: NEXT_PUBLIC_API_URL=local, 배포: 미설정 (axios.ts getBaseURL()과 동일한 규칙)
+        const serverBaseURL =
+            process.env.NEXT_PUBLIC_API_URL === "local"
                 ? "http://192.168.20.249:35000"
                 : "https://mswpms.co.kr:35000";
 
-            //  const serverBaseURL = "http://192.168.20.249:35000";
-
-            const refreshResponse = await fetch(
-                `${serverBaseURL}/auth/refresh`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Cookie: `Refresh=${refreshToken}`,
-                    },
-                    body: JSON.stringify({ refreshToken }),
+        const refreshResponse = await fetch(
+            `${serverBaseURL}/api/auth/refresh`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Cookie: `Refresh=${refreshToken}`,
                 },
+                body: JSON.stringify({ refreshToken }),
+            },
+        );
+
+        // refresh 자체가 실패 (리프레시 토큰 무효/만료 등) -> 재로그인
+        if (!refreshResponse.ok) {
+            console.error(
+                "❌ [Middleware] refresh 실패:",
+                refreshResponse.status,
             );
-
-            if (refreshResponse.ok) {
-                // ✅ 백엔드 Set-Cookie 헤더를 파싱해서 Domain 확인/수정
-                const setCookieHeaders = refreshResponse.headers.getSetCookie();
-                const response = NextResponse.next();
-
-                // 먼저 lms.dtcenter.com 쿠키를 삭제
-
-                response.cookies.delete("Authorization");
-                response.cookies.delete("Refresh");
-
-                setCookieHeaders.forEach((cookie, i) => {
-                    console.log(`  [${i}]:`, cookie);
-
-                    // Domain이 없거나 lms.dtcenter.com이면 .dtcenter.com으로 강제 변경
-                    let modifiedCookie = cookie;
-
-                    if (!cookie.includes("Domain=")) {
-                        // Domain이 없으면 .dtcenter.com 추가 (점으로 시작 = 서브도메인 공유)
-                        modifiedCookie = cookie + "; Domain=.dtcenter.com";
-                        console.log(`    → Domain 추가: Domain=.dtcenter.com`);
-                    } else if (cookie.includes("Domain=lms.dtcenter.com")) {
-                        // lms.dtcenter.com → .dtcenter.com 변경
-                        modifiedCookie = cookie.replace(
-                            "Domain=lms.dtcenter.com",
-                            "Domain=.dtcenter.com",
-                        );
-                        console.log(
-                            `    → Domain 변경: lms.dtcenter.com → .dtcenter.com`,
-                        );
-                    } else if (
-                        cookie.includes("Domain=dtcenter.com") &&
-                        !cookie.includes("Domain=.dtcenter.com")
-                    ) {
-                        // dtcenter.com → .dtcenter.com 변경
-                        modifiedCookie = cookie.replace(
-                            "Domain=dtcenter.com",
-                            "Domain=.dtcenter.com",
-                        );
-                    }
-
-                    response.headers.append("Set-Cookie", modifiedCookie);
-                });
-
-                console.log(
-                    "✅ [Middleware] 토큰 갱신 완료 - .dtcenter.com 쿠키로 설정",
-                );
-                return response;
-            }
-        } catch (error) {
-            console.error("❌ [Middleware] refresh 실패:", error);
+            return redirectToPortal(request);
         }
-    }
 
-    return NextResponse.next();
+        const setCookieHeaders = refreshResponse.headers.getSetCookie();
+
+        // GetData 같은 Server Component는 이번 요청의 쿠키(cookies())를 그대로 읽기 때문에,
+        // Set-Cookie만으로는 "다음 요청부터"만 반영된다.
+        // 이번 요청 안에서도 새 토큰을 쓰도록 request 쪽 쿠키도 즉시 갱신해준다.
+        setCookieHeaders.forEach((cookie) => {
+            const [pair] = cookie.split(";");
+            const eqIdx = pair.indexOf("=");
+            if (eqIdx > -1) {
+                const name = pair.slice(0, eqIdx).trim();
+                const value = pair.slice(eqIdx + 1).trim();
+                if (name === "Authorization" || name === "Refresh") {
+                    request.cookies.set(name, value);
+                }
+            }
+        });
+
+        // 위에서 갱신한 request 쿠키를 이번 요청의 하위 Server Component까지 전달
+        const response = NextResponse.next({ request });
+        setCookieHeaders.forEach((cookie) => {
+            response.headers.append("Set-Cookie", cookie);
+        });
+
+        console.log("✅ [Middleware] 토큰 갱신 완료");
+        return response;
+    } catch (error) {
+        // refresh 요청 자체가 실패 (네트워크 오류 등) -> 재로그인
+        console.error("❌ [Middleware] refresh 요청 실패:", error);
+        return redirectToPortal(request);
+    }
 }
 
 export const config = {
