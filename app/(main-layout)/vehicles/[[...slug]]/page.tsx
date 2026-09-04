@@ -52,6 +52,30 @@ interface VehicleReservation {
     };
 }
 
+interface VehicleSpecHistory {
+    id: number;
+    specDate: string;
+    specDistance: string;
+    content: string | null;
+    createdDate: string;
+    specItems: {
+        specDescription: string;
+        specQuantity: number;
+    }[];
+    employee?: {
+        id: number;
+        employeeNumber: string;
+        name: string;
+        affiliationName: string;
+        position?: string;
+    } | null;
+    vehicle: {
+        id: number;
+        number: string;
+        name: string;
+    };
+}
+
 export default async function Page({ params, searchParams }: PageProps) {
     const { slug } = await params;
     const search = await searchParams;
@@ -78,6 +102,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     // 날짜 필터 파라미터 추출
     const useDateRange = search?.["useDate<>"] as string | undefined; // 운행일지용
     const startDateRange = search?.["startDate<>"] as string | undefined; // 예약용
+    const specDateRange = search?.["specDate<>"] as string | undefined; // 관리내역용
 
     // 페이지네이션 파라미터 추출
     const page = search?.page as string | undefined;
@@ -150,6 +175,10 @@ export default async function Page({ params, searchParams }: PageProps) {
                     apiSearchParams["startDate<>"] = startDateRange;
                 }
 
+                if (specDateRange) {
+                    apiSearchParams["specDate<>"] = specDateRange;
+                }
+
                 if (page !== undefined) {
                     apiSearchParams.page = page;
                 }
@@ -186,21 +215,12 @@ export default async function Page({ params, searchParams }: PageProps) {
                                 totalElements,
                                 totalPages,
                             ) => {
-                                console.log(
-                                    "🔍 [page.tsx] reservations received:",
-                                    reservations,
-                                );
-                                console.log("🔍 [page.tsx] paging info:", {
-                                    page,
-                                    size,
-                                    totalElements,
-                                    totalPages,
-                                });
                                 return (
                                     <Client
                                         slug={slug}
                                         content={vehicleData}
                                         records={[]}
+                                        specs={[]}
                                         reservations={reservations || []}
                                         reservationPage={page}
                                         reservationSize={size}
@@ -211,7 +231,7 @@ export default async function Page({ params, searchParams }: PageProps) {
                             }}
                         </GetData>
                     );
-                } else {
+                } else if (tab === "drivingLogs") {
                     return (
                         <GetData<VehicleRecord>
                             url={`/vrs/vehicle-records/find/all`}
@@ -235,6 +255,40 @@ export default async function Page({ params, searchParams }: PageProps) {
                                     content={vehicleData}
                                     records={records || []}
                                     reservations={[]}
+                                    specs={[]}
+                                    recordPage={page}
+                                    recordSize={size}
+                                    recordTotalElements={totalElements}
+                                    recordTotalPages={totalPages}
+                                />
+                            )}
+                        </GetData>
+                    );
+                } else if (tab === "spec") {
+                    return (
+                        <GetData<VehicleSpecHistory>
+                            url={`/vrs/vehicle-spec-histories/find/all`}
+                            tags={["vehicle-spec"]}
+                            searchParams={apiSearchParams}
+                            filterType={[]}
+                            paging={true}
+                            isArray={true}
+                            dataIndex="content"
+                        >
+                            {(
+                                specs,
+                                queryString,
+                                page,
+                                size,
+                                totalElements,
+                                totalPages,
+                            ) => (
+                                <Client
+                                    slug={slug}
+                                    content={vehicleData}
+                                    records={[]}
+                                    reservations={[]}
+                                    specs={specs || []}
                                     recordPage={page}
                                     recordSize={size}
                                     recordTotalElements={totalElements}

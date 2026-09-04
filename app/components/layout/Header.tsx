@@ -16,8 +16,14 @@ interface HeaderProps {
     initialUnreadCount?: number;
 }
 
-const DEV_PORTAL_URL = "http://portal.dtcenter.com:4000/portal";
+const DEV_PORTAL_URL = "http://lms.dtcenter.com:4000/";
 const TEMPT_PORTAL_URL = "https://portal.mswpms.co.kr:444/";
+
+// 환경 변수가 "local"이면 로컬 포털로, 아니면 배포 포털로 이동
+const PORTAL_URL =
+    process.env.NEXT_PUBLIC_API_URL === "local"
+        ? DEV_PORTAL_URL
+        : TEMPT_PORTAL_URL;
 
 export default function Header({
     showNotification = false,
@@ -43,7 +49,7 @@ export default function Header({
     }, [setUser]);
 
     const backPortal = () => {
-        window.location.href = TEMPT_PORTAL_URL;
+        window.location.href = PORTAL_URL;
     };
 
     const logout = () => {
@@ -57,7 +63,7 @@ export default function Header({
             })
             .finally(() => {
                 setTimeout(() => {
-                    window.location.href = TEMPT_PORTAL_URL;
+                    window.location.href = PORTAL_URL;
                 }, 1000);
             });
     };

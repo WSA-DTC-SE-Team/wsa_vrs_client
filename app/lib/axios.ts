@@ -14,7 +14,7 @@ const getBaseURL = () => {
     // 서버: 백엔드 직접 호출
     let apiUrl = process.env.NEXT_PUBLIC_API_URL;
     if (apiUrl === "local") {
-        apiUrl = "http://192.168.20.249:35000";
+        apiUrl = "http://192.168.20.70:35000";
     } else if (!apiUrl) {
         apiUrl = "https://mswpms.co.kr:35000";
     }

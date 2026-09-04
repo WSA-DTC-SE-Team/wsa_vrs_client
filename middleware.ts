@@ -87,7 +87,7 @@ export async function middleware(request: NextRequest) {
         // 로컬: NEXT_PUBLIC_API_URL=local, 배포: 미설정 (axios.ts getBaseURL()과 동일한 규칙)
         const serverBaseURL =
             process.env.NEXT_PUBLIC_API_URL === "local"
-                ? "http://192.168.20.249:35000"
+                ? "http://192.168.20.70:35000"
                 : "https://mswpms.co.kr:35000";
 
         const refreshResponse = await fetch(

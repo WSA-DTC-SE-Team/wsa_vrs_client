@@ -29,7 +29,7 @@ const NewCar = () => {
     const { setAlert } = useAlertStore();
     const [isReady, setIsReady] = useState(!modal?.vehicleId);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    console.log("modal", modal);
+
     const [carState, setCarState] = useState({
         id: modal?.vehicleId,
         ownerType: "HQ",
@@ -64,13 +64,16 @@ const NewCar = () => {
 
             // Server Component 데이터 갱신 (refresh 대신 현재 페이지로 replace)
             setTimeout(() => {
-                router.replace(window.location.pathname + window.location.search);
+                router.replace(
+                    window.location.pathname + window.location.search,
+                );
             }, 100);
         } catch (error) {
             const axiosError = error as AxiosError<{ detail?: string }>;
             setAlert(
                 "error",
-                axiosError.response?.data?.detail || "차량 등록에 실패했습니다.",
+                axiosError.response?.data?.detail ||
+                    "차량 등록에 실패했습니다.",
             );
         } finally {
             setIsSubmitting(false);

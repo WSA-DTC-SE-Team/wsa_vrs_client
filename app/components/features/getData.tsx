@@ -56,7 +56,7 @@ async function pagingTableGetData<T>(
     // 환경 변수가 "local"이면 로컬(249:35000), 아니면 배포(localhost:8081)
     const isLocal = process.env.NEXT_PUBLIC_API_URL === "local";
     const baseUrl = isLocal
-        ? "http://192.168.20.249:35000"
+        ? "http://192.168.20.70:35000"
         : "http://localhost:8081";
     const fullUrl = `${baseUrl}/api${realUrl}`;
 
@@ -68,13 +68,11 @@ async function pagingTableGetData<T>(
     const allCookies = cookieStore.getAll();
 
     // Authorization 쿠키만 사용 (액세스 토큰)
-    
+
     const authCookie = allCookies.find((c) => c.name === "Authorization");
     const cookieHeader = authCookie
         ? `${authCookie.name}=${authCookie.value}`
         : "";
-
-    console.log("cookieHeader:", cookieHeader);
 
     console.log("🔵 [GetData] Request:", fullUrl);
 

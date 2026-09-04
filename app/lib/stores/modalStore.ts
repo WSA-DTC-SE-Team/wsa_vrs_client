@@ -37,6 +37,18 @@ interface Modal {
             affiliationName?: string;
         } | null;
     };
+    specData?: {
+        id: number;
+        specDate: string;
+        specDistance: string;
+        content: string | null;
+        specItems: { specDescription: string; specQuantity: number }[];
+        vehicle: {
+            id: number;
+            number?: string;
+            name?: string;
+        };
+    };
 }
 
 interface ModalState {
@@ -78,6 +90,18 @@ interface ModalState {
                 affiliationName?: string;
             } | null;
         },
+        specData?: {
+            id: number;
+            specDate: string;
+            specDistance: string;
+            content: string | null;
+            specItems: { specDescription: string; specQuantity: number }[];
+            vehicle: {
+                id: number;
+                number?: string;
+                name?: string;
+            };
+        },
     ) => void;
     closeModal: () => void;
     triggerRefresh: () => void;
@@ -94,6 +118,7 @@ export const useModalStore = create<ModalState>((set) => ({
         endDate,
         reservationData,
         recordData,
+        specData,
     ) => {
         set({
             modal: {
@@ -105,6 +130,7 @@ export const useModalStore = create<ModalState>((set) => ({
                 endDate,
                 reservationData,
                 recordData,
+                specData,
             },
         });
     },

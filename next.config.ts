@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         // 환경에 따른 API URL 설정
         const apiUrl =
             process.env.NEXT_PUBLIC_API_URL === "local"
-                ? "http://192.168.20.249:35000"
+                ? "http://192.168.20.70:35000"
                 : "https://mswpms.co.kr:35000";
 
         console.log("🔧 [next.config] API URL:", apiUrl);

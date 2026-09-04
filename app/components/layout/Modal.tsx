@@ -7,6 +7,8 @@ import NewRecord from "../modals/NewRecord";
 import Reservation from "../modals/Reservation";
 import EditVehicle from "../modals/EditVehicle";
 import EditRecord from "../modals/EditRecord";
+import NewSpec from "../modals/NewSpec";
+import EditSpec from "../modals/EditSpec";
 
 const Modal = () => {
     const { closeModal, modal } = useModalStore();
@@ -25,6 +27,10 @@ const Modal = () => {
                 return <EditVehicle />;
             case "EDIT_RECORD":
                 return <EditRecord />;
+            case "NEW_SPEC":
+                return <NewSpec />;
+            case "EDIT_SPEC":
+                return <EditSpec />;
             default:
                 return null;
         }

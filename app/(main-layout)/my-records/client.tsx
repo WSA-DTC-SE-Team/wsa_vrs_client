@@ -68,7 +68,7 @@ const MyRecordsClient = ({
     }).format(today);
 
     // 현재 연도의 1월 1일과 12월 31일
-    console.log("content", content);
+
     const currentYear = today.getFullYear();
     const yearStart = `${currentYear}-01-01`;
     const yearEnd = `${currentYear}-12-31`;

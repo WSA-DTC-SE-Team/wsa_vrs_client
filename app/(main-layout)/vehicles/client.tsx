@@ -36,6 +36,32 @@ const FUEL_TYPE_MAP: Record<string, string> = {
     ELECTRIC: "전기",
 };
 
+interface SpecItem {
+    specDescription: string;
+    specQuantity: number;
+}
+
+interface VehicleSpecHistory {
+    id: number;
+    specDate: string;
+    specDistance: string;
+    content: string | null;
+    specItems: SpecItem[];
+    createdDate: string;
+    employee?: {
+        id: number;
+        employeeNumber: string;
+        name: string;
+        affiliationName: string;
+        position?: string;
+    } | null;
+    vehicle: {
+        id: number;
+        number: string;
+        name: string;
+    };
+}
+
 interface VehicleRecord {
     id: number;
     isInspection: boolean;
@@ -85,6 +111,7 @@ interface ClientProps {
     content: Car;
     records: VehicleRecord[];
     reservations: VehicleReservation[];
+    specs: VehicleSpecHistory[];
     recordPage?: number;
     recordSize?: number;
     recordTotalElements?: number;
@@ -100,10 +127,12 @@ const Client = ({
     slug,
     content,
     records: initialRecords,
+    specs: initailSpecs,
     reservations: initialReservations,
     recordTotalElements = 0,
     reservationTotalElements = 0,
 }: ClientProps) => {
+    console.log("엥");
     const route = useRouter();
     const searchParams = useSearchParams();
     const { openModal, triggerRefresh, refreshKey } = useModalStore();
@@ -122,6 +151,12 @@ const Client = ({
     const [initialReservationStartDate, initialReservationEndDate] =
         startDateRange?.split(",") || ["", ""];
 
+    // URL에서 날짜 파라미터 파싱 (관리용)
+    const specDateRange = searchParams.get("specDate<>");
+    const [initailSpecStartDate, initialSpecEndDate] = specDateRange?.split(
+        ",",
+    ) || ["", ""];
+
     // URL의 slug[1]로 activeTab 초기화 (기본값: drivingLogs)
     const tabFromUrl = slug && slug[1] ? slug[1] : "drivingLogs";
     const [activeTab, setActiveTab] = useState(tabFromUrl);
@@ -131,14 +166,19 @@ const Client = ({
         useState<VehicleRecord[]>(initialRecords);
     const [mobileReservations, setMobileReservations] =
         useState<VehicleReservation[]>(initialReservations);
+    const [mobileHistories, setMobileHistories] =
+        useState<VehicleSpecHistory[]>(initailSpecs);
     const [recordPage, setRecordPage] = useState(0);
     const [reservationPage, setReservationPage] = useState(0);
+    const [specPage, setSpecPage] = useState(0);
     const [hasMoreRecords, setHasMoreRecords] = useState(false);
     const [hasMoreReservations, setHasMoreReservations] = useState(false);
+    const [hasMoreSpecs, setHasMoreSpecs] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const observerTarget = useRef<HTMLDivElement>(null);
 
     // 페이징 관련 state (클라이언트에서 페이징 UI만 관리)
+    const [specCurrentPage, setSpecCurrentPage] = useState(1);
     const [recordCurrentPage, setRecordCurrentPage] = useState(1);
     const recordItemsPerPage = 10;
     const [excludeCreatedDate, setExcludeCreatedDate] = useState(false);
@@ -167,6 +207,12 @@ const Client = ({
                     { params },
                 );
                 setMobileReservations(response.data.content || []);
+            } else if (activeTab === "spec") {
+                const response = await axiosInstance.get(
+                    `/vrs/vehicle-spec-histories/find/all`,
+                    { params },
+                );
+                setMobileHistories(response.data.content || []);
             }
 
             // 서버 컴포넌트 revalidate (차량 정보 포함)
@@ -184,10 +230,18 @@ const Client = ({
     const recordSearchOptions = [{ value: "employeeName", label: "사용자" }];
 
     const reservationSearchOptions = [{ value: "all", label: "예약자+목적지" }];
+
+    const specSearchOptions = [{ value: "employeeName", label: "사용자" }];
     // 정렬 옵션
     const recordSortOptions = [
         { value: "currentDistance", label: "총 운행 거리순" },
         { value: "id", label: "작성일순" },
+    ];
+
+    const specSortOptions = [
+        { value: "specDate", label: "시행일순" },
+        { value: "id", label: "작성일순" },
+        { value: "specDistance", label: "거리순" },
     ];
 
     const reservationSortOptions = [
@@ -225,6 +279,35 @@ const Client = ({
         );
     };
 
+    // 검색 핸들러
+    const handleSpecSearch = (
+        type: string,
+        keyword: string,
+        sortField?: string,
+        sortOrder?: string,
+        startDate?: string,
+        endDate?: string,
+    ) => {
+        setSpecCurrentPage(1);
+
+        // URL에 검색, 정렬 및 날짜 필터 파라미터 추가
+        const params = new URLSearchParams();
+        if (keyword) {
+            // 필드명을 직접 키로 사용 (예: employee.name=명지애)
+            params.set(type, keyword);
+        }
+        if (sortField && sortOrder) {
+            params.set("sort", `${sortField}.${sortOrder.toLowerCase()}`);
+        }
+        if (startDate && endDate) {
+            params.set("specDate<>", `${startDate},${endDate}`);
+        }
+        const queryString = params.toString();
+        route.push(
+            `/vehicles/${content.id}/spec${queryString ? `?${queryString}` : ""}`,
+        );
+    };
+
     const handleReservationSearch = (
         type: string,
         keyword: string,
@@ -259,8 +342,10 @@ const Client = ({
     useEffect(() => {
         setMobileRecords(initialRecords);
         setMobileReservations(initialReservations);
+        setMobileHistories(initailSpecs);
         setRecordPage(0);
         setReservationPage(0);
+        setSpecPage(0);
 
         const currentPage = Number(searchParams.get("page")) || 0;
         const currentSize = Number(searchParams.get("size")) || 10;
@@ -270,6 +355,10 @@ const Client = ({
                 recordTotalElements / currentSize,
             );
             setHasMoreRecords(currentPage < totalRecordPages - 1);
+        } else if (activeTab === "spec") {
+            // 관리 탭도 서버 total을 recordTotalElements로 받는다
+            const totalSpecPages = Math.ceil(recordTotalElements / currentSize);
+            setHasMoreSpecs(currentPage < totalSpecPages - 1);
         } else {
             const totalReservationPages = Math.ceil(
                 reservationTotalElements / currentSize,
@@ -279,6 +368,7 @@ const Client = ({
     }, [
         initialRecords,
         initialReservations,
+        initailSpecs,
         activeTab,
         recordTotalElements,
         reservationTotalElements,
@@ -301,12 +391,20 @@ const Client = ({
         if (isLoading) return;
 
         const hasMore =
-            activeTab === "drivingLogs" ? hasMoreRecords : hasMoreReservations;
+            activeTab === "drivingLogs"
+                ? hasMoreRecords
+                : activeTab === "spec"
+                  ? hasMoreSpecs
+                  : hasMoreReservations;
         if (!hasMore) return;
 
         setIsLoading(true);
         const currentPage =
-            activeTab === "drivingLogs" ? recordPage : reservationPage;
+            activeTab === "drivingLogs"
+                ? recordPage
+                : activeTab === "spec"
+                  ? specPage
+                  : reservationPage;
         const nextPage = currentPage + 1;
 
         try {
@@ -321,6 +419,7 @@ const Client = ({
             // URL에서 검색, 정렬, 필터 파라미터 가져오기
             const sort = searchParams.get("sort");
             const useDateRange = searchParams.get("useDate<>");
+            const specDateRange = searchParams.get("specDate<>");
             const employeeName = searchParams.get("employeeName");
             const affiliationName = searchParams.get("affiliationName");
             const destination = searchParams.get("destination");
@@ -331,6 +430,7 @@ const Client = ({
                 params.sort = "currentDistance.desc";
             }
             if (useDateRange) params["useDate<>"] = useDateRange;
+            if (specDateRange) params["specDate<>"] = specDateRange;
             if (employeeName) params.employeeName = employeeName;
             if (affiliationName) params.affiliationName = affiliationName;
             if (destination) params.destination = destination;
@@ -338,6 +438,8 @@ const Client = ({
             let url = "";
             if (activeTab === "drivingLogs") {
                 url = `/vrs/vehicle-records/find/all`;
+            } else if (activeTab === "spec") {
+                url = `/vrs/vehicle-spec-histories/find/all`;
             } else {
                 url = `/vrs/vehicle-reservations/find/all`;
             }
@@ -350,6 +452,10 @@ const Client = ({
                 setMobileRecords((prev) => [...prev, ...newContent]);
                 setRecordPage(nextPage);
                 setHasMoreRecords(pageInfo?.hasNext || false);
+            } else if (activeTab === "spec") {
+                setMobileHistories((prev) => [...prev, ...newContent]);
+                setSpecPage(nextPage);
+                setHasMoreSpecs(pageInfo?.hasNext || false);
             } else {
                 setMobileReservations((prev) => [...prev, ...newContent]);
                 setReservationPage(nextPage);
@@ -364,8 +470,10 @@ const Client = ({
         isLoading,
         hasMoreRecords,
         hasMoreReservations,
+        hasMoreSpecs,
         recordPage,
         reservationPage,
+        specPage,
         activeTab,
         slug,
         searchParams,
@@ -374,7 +482,11 @@ const Client = ({
     // Intersection Observer
     useEffect(() => {
         const hasMore =
-            activeTab === "drivingLogs" ? hasMoreRecords : hasMoreReservations;
+            activeTab === "drivingLogs"
+                ? hasMoreRecords
+                : activeTab === "spec"
+                  ? hasMoreSpecs
+                  : hasMoreReservations;
 
         const observer = new IntersectionObserver(
             (entries) => {
@@ -398,6 +510,7 @@ const Client = ({
     }, [
         hasMoreRecords,
         hasMoreReservations,
+        hasMoreSpecs,
         isLoading,
         loadMoreData,
         activeTab,
@@ -412,6 +525,7 @@ const Client = ({
     const tabs = [
         { id: "drivingLogs", label: "운행 일지 조회" },
         { id: "reservations", label: "차량 예약 내역 조회" },
+        { id: "spec", label: "차량 관리 내역 조회" },
     ];
 
     // 탭 변경 핸들러 - URL도 함께 업데이트
@@ -427,6 +541,7 @@ const Client = ({
     // 받은 데이터를 그대로 사용
     const paginatedReservations = reservations;
     const paginatedRecords = records;
+    const paginatedSpecs = mobileHistories;
     console.log(records);
     // Record 클릭 핸들러 - 본인이 작성한 record만 수정 가능
     const handleRecordClick = (record: VehicleRecord) => {
@@ -484,6 +599,27 @@ const Client = ({
                 reservationId: reservation.id,
                 destination: reservation.destination || "",
                 content: reservation.content || "",
+            },
+        );
+    };
+
+    // 관리 내역 클릭 핸들러 - EditSpec 모달 오픈
+    const handleSpecClick = (spec: VehicleSpecHistory) => {
+        openModal(
+            "EDIT_SPEC",
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            {
+                id: spec.id,
+                specDate: spec.specDate,
+                specDistance: spec.specDistance,
+                content: spec.content,
+                specItems: spec.specItems ?? [],
+                vehicle: { id: spec.vehicle.id },
             },
         );
     };
@@ -751,6 +887,12 @@ const Client = ({
                     <AddButton
                         title="운행 내역 추가"
                         modalType="NEW_RECORD"
+                        vehicleId={String(vehicleId)}
+                        vehicleDistance={content.distance}
+                    />
+                    <AddButton
+                        title="관리 내역 추가"
+                        modalType="NEW_SPEC"
                         vehicleId={String(vehicleId)}
                         vehicleDistance={content.distance}
                     />
@@ -1233,6 +1375,297 @@ const Client = ({
                     </CardView>
                 </ContentBox>
             )}
+
+            {activeTab === "spec" && (
+                <ContentBox>
+                    <SearchBar
+                        searchOptions={specSearchOptions}
+                        onSearch={handleSpecSearch}
+                        placeholder="검색어를 입력하세요"
+                        sortOptions={specSortOptions}
+                        showDateFilter={true}
+                        initialStartDate={initailSpecStartDate}
+                        initialEndDate={initialSpecEndDate}
+                    />
+                    {/* <ExcelDownloadWrapper>
+                        <CheckboxWrapper>
+                            <input
+                                type="checkbox"
+                                id="excludeCreatedDate"
+                                checked={excludeCreatedDate}
+                                onChange={(e) =>
+                                    setExcludeCreatedDate(e.target.checked)
+                                }
+                            />
+                            <CheckboxLabel htmlFor="excludeCreatedDate">
+                                작성일 제외
+                            </CheckboxLabel>
+                        </CheckboxWrapper>
+                        <ExcelButton onClick={handleExcelDownload}>
+                            Excel 다운로드
+                        </ExcelButton>
+                    </ExcelDownloadWrapper> */}
+                    <DesktopView>
+                        <TableWrapper>
+                            <SpecTable>
+                                <THead>
+                                    <THeadRow>
+                                        <BorderedTH style={{ width: "120px" }}>
+                                            No.
+                                        </BorderedTH>
+                                        <BorderedTH style={{ width: "120px" }}>
+                                            시행일자
+                                        </BorderedTH>
+                                        <BorderedTH style={{ width: "120px" }}>
+                                            작성일자
+                                        </BorderedTH>
+                                        <BorderedTH style={{ width: "120px" }}>
+                                            주행거리(km)
+                                        </BorderedTH>
+                                        <BorderedTH>관리 항목</BorderedTH>
+                                        <BorderedTH style={{ width: "80px" }}>
+                                            수량
+                                        </BorderedTH>
+                                        <BorderedTH>부서</BorderedTH>
+                                        <BorderedTH>성명</BorderedTH>
+                                        <BorderedTH style={{ width: "300px" }}>
+                                            비고
+                                        </BorderedTH>
+                                    </THeadRow>
+                                </THead>
+                                {paginatedSpecs.length > 0 ? (
+                                    paginatedSpecs.map((spec, index) => {
+                                        const specItems =
+                                            spec.specItems &&
+                                            spec.specItems.length > 0
+                                                ? spec.specItems
+                                                : [null];
+                                        const span = specItems.length;
+                                        return (
+                                            <TBody key={spec.id}>
+                                                {specItems.map(
+                                                    (item, itemIndex) => (
+                                                        <TRow
+                                                            key={`${spec.id}-${itemIndex}`}
+                                                            onClick={() =>
+                                                                handleSpecClick(
+                                                                    spec,
+                                                                )
+                                                            }
+                                                            style={{
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            {itemIndex ===
+                                                                0 && (
+                                                                <>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {index +
+                                                                            1}
+                                                                    </BorderedTD>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            spec.specDate
+                                                                        }
+                                                                    </BorderedTD>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {spec.createdDate
+                                                                            ?.replace(
+                                                                                "T",
+                                                                                " ",
+                                                                            )
+                                                                            .slice(
+                                                                                0,
+                                                                                16,
+                                                                            )}
+                                                                    </BorderedTD>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {Number(
+                                                                            spec.specDistance ??
+                                                                                0,
+                                                                        ).toLocaleString()}
+                                                                    </BorderedTD>
+                                                                </>
+                                                            )}
+                                                            <BorderedTD
+                                                                style={{
+                                                                    textAlign:
+                                                                        "left",
+                                                                }}
+                                                            >
+                                                                {item?.specDescription ||
+                                                                    "-"}
+                                                            </BorderedTD>
+                                                            <BorderedTD>
+                                                                {item?.specQuantity ??
+                                                                    "-"}
+                                                            </BorderedTD>
+                                                            {itemIndex ===
+                                                                0 && (
+                                                                <>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {spec
+                                                                            .employee
+                                                                            ?.affiliationName ||
+                                                                            "-"}
+                                                                    </BorderedTD>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                    >
+                                                                        {spec
+                                                                            .employee
+                                                                            ?.name ||
+                                                                            "-"}
+                                                                    </BorderedTD>
+                                                                    <BorderedTD
+                                                                        rowSpan={
+                                                                            span
+                                                                        }
+                                                                        style={{
+                                                                            textAlign:
+                                                                                "left",
+                                                                        }}
+                                                                    >
+                                                                        {spec.content ||
+                                                                            "-"}
+                                                                    </BorderedTD>
+                                                                </>
+                                                            )}
+                                                        </TRow>
+                                                    ),
+                                                )}
+                                            </TBody>
+                                        );
+                                    })
+                                ) : (
+                                    <TBody>
+                                        <TRow>
+                                            <BorderedTD colSpan={9}>
+                                                관리 내역이 없습니다
+                                            </BorderedTD>
+                                        </TRow>
+                                    </TBody>
+                                )}
+                            </SpecTable>
+                        </TableWrapper>
+                        <AdvancedPagination
+                            totalItems={recordTotalElements}
+                            defaultPageSize={10}
+                            pageSizeOptions={[10, 20, 50, 0]}
+                        />
+                    </DesktopView>
+                    <CardView>
+                        {paginatedSpecs.length > 0 ? (
+                            <>
+                                <CardGrid>
+                                    {paginatedSpecs.map((spec, index) => (
+                                        <ReservationCard
+                                            key={spec.id}
+                                            onClick={() => handleSpecClick(spec)}
+                                            style={{ cursor: "pointer" }}
+                                        >
+                                            <CardHeader>
+                                                <ReservationTitle>
+                                                    {index + 1}. {spec.specDate}
+                                                </ReservationTitle>
+                                            </CardHeader>
+                                            <ReservationContent>
+                                                <ReservationInfoRow>
+                                                    <ReservationLabel>
+                                                        주행거리
+                                                    </ReservationLabel>
+                                                    <ReservationValue>
+                                                        {Number(
+                                                            spec.specDistance ??
+                                                                0,
+                                                        ).toLocaleString()}{" "}
+                                                        km
+                                                    </ReservationValue>
+                                                </ReservationInfoRow>
+                                                <ReservationInfoRow>
+                                                    <ReservationLabel>
+                                                        작성자
+                                                    </ReservationLabel>
+                                                    <ReservationValue>
+                                                        {spec.employee?.name ||
+                                                            "-"}{" "}
+                                                        (
+                                                        {spec.employee
+                                                            ?.affiliationName ||
+                                                            "-"}
+                                                        )
+                                                    </ReservationValue>
+                                                </ReservationInfoRow>
+                                                {(spec.specItems || []).map(
+                                                    (item, i) => (
+                                                        <ReservationInfoRow
+                                                            key={i}
+                                                        >
+                                                            <ReservationLabel>
+                                                                {
+                                                                    item.specDescription
+                                                                }
+                                                            </ReservationLabel>
+                                                            <ReservationValue>
+                                                                {
+                                                                    item.specQuantity
+                                                                }
+                                                            </ReservationValue>
+                                                        </ReservationInfoRow>
+                                                    ),
+                                                )}
+                                                {spec.content && (
+                                                    <ReservationInfoRow>
+                                                        <ReservationLabel>
+                                                            비고
+                                                        </ReservationLabel>
+                                                        <ReservationValue>
+                                                            {spec.content}
+                                                        </ReservationValue>
+                                                    </ReservationInfoRow>
+                                                )}
+                                            </ReservationContent>
+                                        </ReservationCard>
+                                    ))}
+                                </CardGrid>
+                                {isLoading && (
+                                    <LoadingMessage>로딩 중...</LoadingMessage>
+                                )}
+                                <div
+                                    ref={observerTarget}
+                                    style={{ height: "20px" }}
+                                />
+                            </>
+                        ) : (
+                            <EmptyStateCard>
+                                관리 내역이 없습니다
+                            </EmptyStateCard>
+                        )}
+                    </CardView>
+                </ContentBox>
+            )}
         </Container>
     );
 };
@@ -1481,6 +1914,14 @@ const BorderedTH = styled(TH)`
 
 const BorderedTD = styled(TD)`
     border: 1px solid #d1d5db;
+`;
+
+// 관리 내역 테이블: 한 내역이 여러 tr(관리항목)로 쪼개지므로,
+// tbody 하나 = 한 내역 그룹. 그룹 내 아무 행에 hover 하면 그룹 전체 강조.
+const SpecTable = styled(BorderedTable)`
+    tbody:hover td {
+        background-color: #f3f4f6;
+    }
 `;
 
 // Card View Components
